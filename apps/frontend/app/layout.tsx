@@ -2,7 +2,6 @@ import React from 'react'
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
-import { trpc } from '@/lib/trpc'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -11,7 +10,7 @@ export const metadata = {
     description: '技術者とクリエイターのための一発完結依頼マッチングプラットフォーム',
 }
 
-function RootLayout({
+export default function RootLayout({
     children,
 }: {
     children: React.ReactNode
@@ -26,5 +25,3 @@ function RootLayout({
         </html>
     )
 }
-
-export default trpc.withTRPC(RootLayout)
