@@ -1,0 +1,516 @@
+openapi: 3.1.0
+info:
+  title: OneShot Platform API
+  description: OneShot プラットフォームのAPI仕様書
+  version: 1.0.0
+  contact:
+    name: OneShot Development Team
+    email: dev@oneshot.example
+    url: https://oneshot.example
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.oneshot.example
+    description: Production server
+  - url: http://localhost:3001
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザーID
+        nickname:
+          type: string
+          maxLength: 32
+          description: ニックネーム
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          description: ユーザーロール
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時
+      required:
+        - id
+        - nickname
+        - email
+        - role
+        - createdAt
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 投稿ID
+        title:
+          type: string
+          maxLength: 100
+          description: タイトル
+        category:
+          type: string
+          maxLength: 50
+          description: カテゴリ
+        content:
+          type: string
+          description: 内容
+        budget:
+          type: integer
+          minimum: 100
+          description: 予算（円）
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          description: 希望納期
+        status:
+          type: string
+          enum: [OPEN, IN_PROGRESS, COMPLETED, CANCELLED]
+          description: ステータス
+        flagsCount:
+          type: integer
+          minimum: 0
+          description: 通報数
+        acceptedBy:
+          type: string
+          format: uuid
+          nullable: true
+          description: 受注者ID
+        author:
+          $ref: '#/components/schemas/UserSummary'
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新日時
+      required:
+        - id
+        - title
+        - category
+        - content
+        - budget
+        - status
+        - flagsCount
+        - author
+        - createdAt
+        - updatedAt
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザーID
+        nickname:
+          type: string
+          description: ニックネーム
+      required:
+        - id
+        - nickname
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 通報ID
+        postId:
+          type: string
+          format: uuid
+          description: 投稿ID
+        reporterId:
+          type: string
+          format: uuid
+          description: 通報者ID
+        reason:
+          type: string
+          maxLength: 200
+          description: 通報理由
+        status:
+          type: string
+          enum: [PENDING, REVIEWED, RESOLVED]
+          description: ステータス
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時
+      required:
+        - id
+        - postId
+        - reporterId
+        - reason
+        - status
+        - createdAt
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 決済ID
+        postId:
+          type: string
+          format: uuid
+          description: 投稿ID
+        amount:
+          type: integer
+          minimum: 100
+          description: 支払い金額（円）
+        platformFee:
+          type: integer
+          minimum: 0
+          description: プラットフォーム手数料（円）
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED, REFUNDED]
+          description: 決済ステータス
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時
+      required:
+        - id
+        - postId
+        - amount
+        - platformFee
+        - status
+        - createdAt
+
+    PostCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: タイトル
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: カテゴリ
+        content:
+          type: string
+          minLength: 1
+          description: 内容
+        budget:
+          type: integer
+          minimum: 100
+          description: 予算（円）
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          description: 希望納期
+      required:
+        - title
+        - category
+        - content
+        - budget
+
+    PostListRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          description: カテゴリフィルター
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: 取得件数
+        cursor:
+          type: string
+          description: ページング用カーソル
+
+    PostListResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+          description: 投稿一覧
+        nextCursor:
+          type: string
+          nullable: true
+          description: 次のページ用カーソル
+      required:
+        - posts
+
+    ReportCreateRequest:
+      type: object
+      properties:
+        postId:
+          type: string
+          format: uuid
+          description: 投稿ID
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 通報理由
+      required:
+        - postId
+        - reason
+
+    PaymentCheckoutRequest:
+      type: object
+      properties:
+        postId:
+          type: string
+          format: uuid
+          description: 投稿ID
+      required:
+        - postId
+
+    PaymentCheckoutResponse:
+      type: object
+      properties:
+        paymentIntentId:
+          type: string
+          description: Stripe Payment Intent ID
+        clientSecret:
+          type: string
+          description: クライアント側決済用シークレット
+      required:
+        - paymentIntentId
+        - clientSecret
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: エラーメッセージ
+        code:
+          type: string
+          description: エラーコード
+        details:
+          type: object
+          description: エラー詳細
+      required:
+        - error
+
+paths:
+  /api/trpc/posts.list:
+    post:
+      summary: 投稿一覧取得
+      description: カテゴリフィルターと페이징に対応した投稿一覧を取得
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostListRequest'
+      responses:
+        '200':
+          description: 投稿一覧取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostListResponse'
+        '400':
+          description: リクエストパラメータエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/trpc/posts.create:
+    post:
+      summary: 投稿作成
+      description: 新しい依頼投稿を作成
+      tags:
+        - Posts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostCreateRequest'
+      responses:
+        '200':
+          description: 投稿作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/trpc/posts.getById:
+    post:
+      summary: 投稿詳細取得
+      description: 指定されたIDの投稿詳細を取得
+      tags:
+        - Posts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: uuid
+      responses:
+        '200':
+          description: 投稿詳細取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          description: 投稿が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/trpc/reports.create:
+    post:
+      summary: 通報作成
+      description: 投稿に対する通報を作成
+      tags:
+        - Reports
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+      responses:
+        '200':
+          description: 通報作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 重複通報エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/payment/checkout:
+    post:
+      summary: 決済開始
+      description: Stripe決済フローを開始
+      tags:
+        - Payment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCheckoutRequest'
+      responses:
+        '200':
+          description: 決済開始成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCheckoutResponse'
+        '400':
+          description: リクエストエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      summary: ヘルスチェック
+      description: APIサーバーの稼働状況確認
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: サーバー正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+tags:
+  - name: Posts
+    description: 投稿関連のAPI
+  - name: Reports
+    description: 通報関連のAPI
+  - name: Payment
+    description: 決済関連のAPI
+  - name: System
+    description: システム関連のAPI

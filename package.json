@@ -1,0 +1,36 @@
+{
+    "name": "oneshot-platform",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "build": "turbo run build",
+        "dev": "turbo run dev",
+        "lint": "turbo run lint",
+        "test": "turbo run test",
+        "test:coverage": "turbo run test:coverage",
+        "db:migrate": "cd apps/backend && npx prisma migrate dev",
+        "db:seed": "cd apps/backend && npx prisma db seed",
+        "openapi:gen": "cd apps/backend && npm run openapi:gen",
+        "checkall": "npm run lint && npm run test:coverage && npm run check:openapi && npm run check:env && npm run check:docker",
+        "check:openapi": "redocly lint docs/openapi.yaml",
+        "check:env": "node scripts/check-env.js",
+        "check:docker": "hadolint docker/*.Dockerfile"
+    },
+    "devDependencies": {
+        "@turbo/gen": "^1.11.2",
+        "turbo": "^1.11.2",
+        "prettier": "^3.1.1",
+        "eslint": "^8.56.0",
+        "typescript": "^5.3.3",
+        "hadolint": "^0.1.0",
+        "@redocly/cli": "^1.8.1"
+    },
+    "packageManager": "pnpm@8.13.1",
+    "engines": {
+        "node": ">=18.0.0",
+        "pnpm": ">=8.0.0"
+    }
+}

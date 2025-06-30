@@ -1,0 +1,64 @@
+# Caddyfile for OneShot Platform
+
+{
+    # Global options
+    auto_https off
+    admin off
+}
+
+# Main site
+{$DOMAIN} {
+    # Frontend (Next.js)
+    reverse_proxy frontend:3000
+
+    # API routes
+    handle /api/* {
+        reverse_proxy backend:3001
+    }
+
+    # MinIO for file uploads
+    handle /uploads/* {
+        reverse_proxy minio:9000
+    }
+
+    # Keycloak auth
+    handle /auth/* {
+        reverse_proxy keycloak:8080
+    }
+
+    # Monitoring (optional, for admin access)
+    handle /monitoring/prometheus* {
+        reverse_proxy prometheus:9090
+    }
+
+    handle /monitoring/grafana* {
+        reverse_proxy grafana:3000
+    }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # Rate limiting
+    rate_limit {
+        zone static_rate_limiter {
+            key {remote_host}
+            events 100
+            window 1m
+        }
+    }
+
+    # Gzip compression
+    encode gzip
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}

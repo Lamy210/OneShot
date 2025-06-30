@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PostStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nickname  String   @db.VarChar(32)
+  email     String   @unique
+  authId    String   @unique // Keycloak User ID
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  posts    Post[]
+  reports  Report[]
+  payments Payment[]
+
+  @@map("users")
+}
+
+model Post {
+  id          String     @id @default(uuid())
+  authorId    String
+  title       String     @db.VarChar(100)
+  category    String     @db.VarChar(50)
+  content     String
+  budget      Int // 予算（円）
+  deadline    DateTime?
+  status      PostStatus @default(OPEN)
+  flagsCount  Int        @default(0)
+  acceptedBy  String?    // 受注者ID
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  author  User     @relation(fields: [authorId], references: [id])
+  flags   Report[]
+  payment Payment?
+
+  @@map("posts")
+}
+
+model Report {
+  id        String       @id @default(uuid())
+  postId    String
+  reporterId String
+  reason    String       @db.VarChar(200)
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  post     Post @relation(fields: [postId], references: [id])
+  reporter User @relation(fields: [reporterId], references: [id])
+
+  @@unique([postId, reporterId])
+  @@map("reports")
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  postId           String        @unique
+  payerId          String
+  amount           Int // 支払い金額（円）
+  platformFee      Int // プラットフォーム手数料（円）
+  stripePaymentId  String?       // Stripe Payment Intent ID
+  stripeAccountId  String?       // Stripe Connect Account ID
+  status           PaymentStatus @default(PENDING)
+  paidAt           DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  post  Post @relation(fields: [postId], references: [id])
+  payer User @relation(fields: [payerId], references: [id])
+
+  @@map("payments")
+}
+
+model NGWord {
+  id        String   @id @default(uuid())
+  word      String   @unique @db.VarChar(50)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("ng_words")
+}
