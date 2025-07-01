@@ -4,28 +4,6 @@ import Link from 'next/link'
 export default function HomePage() {
     return (
         <div className="min-h-screen">
-            {/* Header */}
-            <header className="bg-white shadow-sm border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center">
-                            <h1 className="text-2xl font-bold text-primary-600">OneShot</h1>
-                        </div>
-                        <nav className="flex space-x-8">
-                            <Link href="/post/create" className="text-gray-600 hover:text-primary-600">
-                                投稿作成
-                            </Link>
-                            <Link href="/dashboard" className="text-gray-600 hover:text-primary-600">
-                                ダッシュボード
-                            </Link>
-                            <Link href="/api/auth/login" className="btn-primary">
-                                ログイン
-                            </Link>
-                        </nav>
-                    </div>
-                </div>
-            </header>
-
             {/* Hero Section */}
             <section className="bg-gradient-to-r from-primary-600 to-secondary-600 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
@@ -98,43 +76,6 @@ export default function HomePage() {
                     </div>
                 </div>
             </section>
-
-            {/* Footer */}
-            <footer className="bg-gray-900 text-white py-12">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid md:grid-cols-4 gap-8">
-                        <div>
-                            <h5 className="text-lg font-semibold mb-4">OneShot</h5>
-                            <p className="text-gray-400">
-                                技術者とクリエイターのための一発完結依頼プラットフォーム
-                            </p>
-                        </div>
-                        <div>
-                            <h6 className="font-semibold mb-4">サービス</h6>
-                            <ul className="space-y-2 text-gray-400">
-                                <li><Link href="/post/create" className="hover:text-white">依頼投稿</Link></li>
-                                <li><Link href="/dashboard" className="hover:text-white">案件検索</Link></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h6 className="font-semibold mb-4">サポート</h6>
-                            <ul className="space-y-2 text-gray-400">
-                                <li><Link href="/terms" className="hover:text-white">利用規約</Link></li>
-                                <li><Link href="/privacy" className="hover:text-white">プライバシー</Link></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h6 className="font-semibold mb-4">お問い合わせ</h6>
-                            <p className="text-gray-400">
-                                support@oneshot.example
-                            </p>
-                        </div>
-                    </div>
-                    <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                        <p>&copy; 2025 OneShot Platform. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
         </div>
     )
 }
