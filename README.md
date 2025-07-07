@@ -259,3 +259,28 @@ MIT License
 ---
 
 **Built with ❤️ by the OneShot Team**
+
+## 🚀 本番対応・セキュリティ強化ポイント
+
+### 認証・認可
+- Keycloak（OpenID Connect）によるJWT認証を本番環境で必須化
+- tRPC/REST APIともにユーザー認証・ロール認可を徹底
+- AuthorizationヘッダーのBearerトークン検証
+
+### 決済
+- Stripe本番API連携（PaymentIntent発行・clientSecret返却）
+- Webhookで決済完了/失敗時にDBのPaymentレコードを自動更新
+- STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRETは.envで安全に管理
+
+### バリデーション・エラーハンドリング
+- REST/tRPCともにzodや型チェックで入力値を厳格バリデーション
+- 予期しないエラー時は詳細なログ出力とクライアントへの適切なエラーレスポンス
+
+### セキュリティ
+- すべての重要APIで認証必須化
+- Prisma ORMによるSQLインジェクション対策
+- Helmet/CORS等のセキュリティミドルウェア適用
+
+### テスト
+- Jest＋supertestによるAPIテスト雛形を追加
+- 今後本番品質のテストケースを拡充予定

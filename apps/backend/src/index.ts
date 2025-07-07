@@ -5,6 +5,7 @@ import { createExpressMiddleware } from '@trpc/server/adapters/express'
 import { appRouter } from './routes'
 import { createContext } from './context'
 import { logger } from './utils/logger'
+import { registerRestEndpoints } from './routes'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -34,10 +35,8 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 
-// Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() })
-})
+// RESTエンドポイント登録
+registerRestEndpoints(app)
 
 // tRPC router
 app.use('/api/trpc', createExpressMiddleware({
