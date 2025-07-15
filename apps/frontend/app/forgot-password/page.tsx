@@ -14,8 +14,17 @@ export default function ForgotPassword() {
         setError(null);
 
         try {
-            // Mock password reset - in real app this would call the password reset API
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // 本番API呼び出し
+            const res = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/trpc/auth.forgotPassword`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ input: { email } })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                setError(data.error?.message || 'パスワードリセットの送信に失敗しました。');
+                return;
+            }
             setSubmitted(true);
         } catch (err) {
             setError('パスワードリセットの送信中にエラーが発生しました。');

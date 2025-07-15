@@ -27,9 +27,28 @@ app.use(helmet({
 }))
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3003', 'http://localhost:3004'],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }))
+
+// Cookie設定ミドルウェア
+app.use((req, res, next) => {
+    // セキュアなCookie設定
+    res.cookie = (name: string, value: string, options: any = {}) => {
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict' as const,
+            maxAge: 24 * 60 * 60 * 1000, // 24時間
+            ...options
+        };
+        res.setHeader('Set-Cookie', `${name}=${value}; ${Object.entries(cookieOptions).map(([key, val]) => `${key}=${val}`).join('; ')}`);
+        return res;
+    };
+    next();
+});
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
@@ -51,6 +70,8 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
     res.status(500).json({ error: 'Internal server error' })
 })
 
-app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`)
+const HOST = process.env.HOST || '0.0.0.0'
+const PORT_NUM = typeof PORT === 'string' ? parseInt(PORT, 10) : PORT
+app.listen(PORT_NUM, HOST, () => {
+    logger.info(`Server running on http://${HOST}:${PORT_NUM}`)
 })

@@ -5,14 +5,13 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { name, email, password } = body;
 
-        // Basic validation
+        // バリデーション
         if (!name || !email || !password) {
             return NextResponse.json(
                 { success: false, error: '必要な項目が入力されていません。' },
                 { status: 400 }
             );
         }
-
         if (password.length < 8) {
             return NextResponse.json(
                 { success: false, error: 'パスワードは8文字以上で入力してください。' },
@@ -20,27 +19,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Mock user registration - in real app this would save to database
-        const mockUser = {
-            id: 'user-' + Date.now(),
-            name,
-            email,
-            createdAt: new Date().toISOString(),
-        };
-
-        // Simulate duplicate email check
-        if (email === 'existing@example.com') {
+        // バックエンドtRPC API呼び出し
+        const res = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/api/trpc/auth.register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                input: { nickname: name, email, password }
+            })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) {
             return NextResponse.json(
-                { success: false, error: 'このメールアドレスは既に登録されています。' },
-                { status: 409 }
+                { success: false, error: data.error?.message || '登録に失敗しました。' },
+                { status: res.status }
             );
         }
-
-        return NextResponse.json({
-            success: true,
-            message: 'アカウントが正常に作成されました。ログインページに移動してください。',
-            user: mockUser,
-        });
+        // tRPCのレスポンス形式に合わせてdata.result.dataを返す
+        return NextResponse.json({ success: true, ...data.result.data });
     } catch (error) {
         return NextResponse.json(
             { success: false, error: '登録処理中にエラーが発生しました。' },

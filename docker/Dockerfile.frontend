@@ -8,6 +8,7 @@ RUN npm install -g pnpm@8.13.1
 # Install dependencies
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml turbo.json .npmrc ./
+COPY pnpm-lock.yaml ./
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/utils/package.json ./packages/utils/
 RUN pnpm install --frozen-lockfile
@@ -37,7 +38,7 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/apps/frontend/public ./public
 
-COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./.next/standalone
 COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/static ./.next/static
 
 USER nextjs
@@ -47,4 +48,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["node", ".next/standalone/apps/frontend/server.js"]

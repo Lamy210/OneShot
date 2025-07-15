@@ -1,50 +1,21 @@
-// NGワード判定ロジック
-const ngWords = [
-    // 一般的なNGワード
-    'スパム',
-    'spam',
-    '詐欺',
-    'fraud',
-    '違法',
-    'illegal',
-    '犯罪',
-    'crime',
+import { PrismaClient } from '@prisma/client'
 
-    // 差別的表現
-    '差別',
-    'discrimination',
-
-    // 暴力的表現
-    '暴力',
-    'violence',
-    '殺人',
-    'murder',
-
-    // アダルト関連
-    'アダルト',
-    'adult',
-    'エロ',
-    'ero',
-
-    // その他の問題のある表現
-    '薬物',
-    'drug',
-    'ギャンブル',
-    'gambling',
-] as const
+const prisma = new PrismaClient()
 
 /**
- * テキストにNGワードが含まれているかチェック
+ * テキストにNGワードが含まれているかチェック（DB参照）
  */
-export function containsNGWord(text: string): boolean {
+export async function containsNGWord(text: string): Promise<boolean> {
     const lowerText = text.toLowerCase()
-    return ngWords.some(word => lowerText.includes(word.toLowerCase()))
+    const ngWords = await prisma.ngWord.findMany({ where: { isActive: true } })
+    return ngWords.some(wordObj => lowerText.includes(wordObj.word.toLowerCase()))
 }
 
 /**
- * NGワードを検出して配列で返す
+ * テキストに含まれるNGワード一覧を返す（DB参照）
  */
-export function detectNGWords(text: string): string[] {
+export async function detectNGWords(text: string): Promise<string[]> {
     const lowerText = text.toLowerCase()
-    return ngWords.filter(word => lowerText.includes(word.toLowerCase()))
+    const ngWords = await prisma.ngWord.findMany({ where: { isActive: true } })
+    return ngWords.filter(wordObj => lowerText.includes(wordObj.word.toLowerCase())).map(w => w.word)
 }

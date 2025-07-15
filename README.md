@@ -1,5 +1,13 @@
 # OneShot Platform
 
+## 📚 ドキュメント集
+
+- [運用ガイド（runbook.md）](./docs/runbook.md)
+- [API仕様書（openapi.yaml）](./docs/openapi.yaml)
+- [アーキテクチャ設計（architecture.md）](./docs/architecture.md)
+- [ER図（er-diagram.md）](./docs/er-diagram.md)
+- [主要フロー図（flow-diagram.md）](./docs/flow-diagram.md)
+
 **一発完結の依頼マッチングプラットフォーム**
 
 技術者とクリエイターのためのシンプルで安全な依頼システムです。複雑な交渉不要で、明確な依頼内容により確実に成果を獲得できます。

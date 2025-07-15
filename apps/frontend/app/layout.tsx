@@ -2,6 +2,7 @@ import React from 'react'
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
+import NotificationBell from '../components/NotificationBell'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -37,6 +38,10 @@ export default function RootLayout({
                                     <a href="/dashboard" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">
                                         ダッシュボード
                                     </a>
+                                    <a href="/settings" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">
+                                        設定
+                                    </a>
+                                    <NotificationBell />
                                     <a href="/login" className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium">
                                         ログイン
                                     </a>
@@ -67,6 +72,7 @@ export default function RootLayout({
                                     <ul className="space-y-2">
                                         <li><a href="/post/create" className="text-sm text-gray-600 hover:text-blue-600">投稿作成</a></li>
                                         <li><a href="/dashboard" className="text-sm text-gray-600 hover:text-blue-600">ダッシュボード</a></li>
+                                        <li><a href="/settings" className="text-sm text-gray-600 hover:text-blue-600">設定</a></li>
                                     </ul>
                                 </div>
                                 <div>

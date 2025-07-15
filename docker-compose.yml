@@ -32,8 +32,8 @@ services:
     image: minio/minio:latest
     container_name: oneshot_minio
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
     volumes:
       - minio_data:/data
     ports:
@@ -49,16 +49,16 @@ services:
     image: quay.io/keycloak/keycloak:23.0
     container_name: oneshot_keycloak
     environment:
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/oneshot_db
       KC_DB_USERNAME: oneshot
       KC_DB_PASSWORD: password123
-      KC_HOSTNAME: ${DOMAIN}
+      KC_HOSTNAME: localhost
       KC_HTTP_ENABLED: true
     ports:
-      - "8080:8080"
+      - "8082:8080"
     networks:
       - oneshot_network
     depends_on:
@@ -73,14 +73,18 @@ services:
       dockerfile: docker/Dockerfile.backend
     container_name: oneshot_backend
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      FRONTEND_URL: ${FRONTEND_URL}
+      DATABASE_URL: postgresql://oneshot:password123@postgres:5432/oneshot_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
+      JWT_REFRESH_SECRET: your-super-secret-jwt-refresh-key-change-this-in-production
+      STRIPE_SECRET_KEY: sk_test_your_stripe_secret_key
+      FRONTEND_URL: http://localhost:3003
       NODE_ENV: production
+      KEYCLOAK_PUBLIC_KEY: dev-key
+      VAPID_PUBLIC_KEY: BC0HM4i1g1AT-7dayHyXVwESygDUbZqH90rfbb67Mf4neTVpEp0Kl_cNmIHlvT1_SXlc9Yo32m6Mbzzj0SgEJHs
+      VAPID_PRIVATE_KEY: Ek7DWxUYaOKfhpuzDvlg6ojoU1DofvH52w6CHGqoccc
     ports:
-      - "3001:3001"
+      - "3004:3001"
     networks:
       - oneshot_network
     depends_on:
@@ -96,14 +100,15 @@ services:
       dockerfile: docker/Dockerfile.frontend
     container_name: oneshot_frontend
     environment:
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      KEYCLOAK_ID: ${KEYCLOAK_ID}
-      KEYCLOAK_SECRET: ${KEYCLOAK_SECRET}
-      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
-      BACKEND_URL: ${BACKEND_URL}
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: your-nextauth-secret-key
+      KEYCLOAK_ID: oneshot-frontend
+      KEYCLOAK_SECRET: dev-secret
+      KEYCLOAK_ISSUER: http://localhost:8082/auth/realms/oneshot
+      BACKEND_URL: http://localhost:3004
+      NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "3003:3000"
     networks:
       - oneshot_network
     depends_on:
@@ -115,8 +120,8 @@ services:
     image: caddy:2-alpine
     container_name: oneshot_caddy
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -145,9 +150,9 @@ services:
     image: grafana/grafana:latest
     container_name: oneshot_grafana
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SECURITY_ADMIN_PASSWORD: admin123
     ports:
-      - "3001:3000"
+      - "3005:3000"
     volumes:
       - grafana_data:/var/lib/grafana
     networks:

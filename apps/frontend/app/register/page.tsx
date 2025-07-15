@@ -34,21 +34,30 @@ export default function Register() {
                 setError('パスワードが一致しません。');
                 return;
             }
-
             if (formData.password.length < 8) {
                 setError('パスワードは8文字以上で入力してください。');
                 return;
             }
-
             if (!formData.acceptTerms) {
                 setError('利用規約に同意してください。');
                 return;
             }
-
-            // Mock registration - in real app this would call the registration API
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Redirect to login page
+            // 本番API呼び出し
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                setError(data.error || '登録に失敗しました。');
+                return;
+            }
+            // 登録成功時はログイン画面へ遷移
             router.push('/login?message=registration-success');
         } catch (err) {
             setError('登録中にエラーが発生しました。');

@@ -8,10 +8,13 @@ import { trpc } from '@/lib/trpc'
 export default function CreatePostPage() {
     const router = useRouter()
     const createPostMutation = trpc.posts.create.useMutation()
+    
+    // カテゴリ一覧を動的に取得
+    const categoriesQuery = trpc.categories.list.useQuery()
 
     const [formData, setFormData] = useState({
         title: '',
-        category: '',
+        categoryId: '', // categoryIdに変更
         content: '',
         budget: '',
         deadline: '',
@@ -19,15 +22,9 @@ export default function CreatePostPage() {
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    const categories = [
-        'Web開発',
-        'モバイルアプリ',
-        'デザイン',
-        'ライティング',
-        'データ分析',
-        'マーケティング',
-        'その他',
-    ]
+    // カテゴリデータ取得状態
+    const { data, isLoading, isError, refetch } = categoriesQuery;
+    const categories = data?.categories || [];
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {}
@@ -40,8 +37,8 @@ export default function CreatePostPage() {
         }
 
         // カテゴリ検証
-        if (!formData.category) {
-            newErrors.category = 'カテゴリを選択してください'
+        if (!formData.categoryId) {
+            newErrors.categoryId = 'カテゴリを選択してください'
         }
 
         // 内容検証
@@ -68,32 +65,41 @@ export default function CreatePostPage() {
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+        e.preventDefault();
+        setIsSubmitting(true);
+        setErrors({});
 
-        if (!validateForm()) {
-            return
+        // バリデーション
+        const newErrors: Record<string, string> = {};
+        if (!formData.title.trim()) newErrors.title = 'タイトルは必須です';
+        if (!formData.categoryId) newErrors.categoryId = 'カテゴリは必須です';
+        if (!formData.content.trim()) newErrors.content = '内容は必須です';
+        if (!formData.budget || parseInt(formData.budget) < 100) newErrors.budget = '予算は100円以上で入力してください';
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            setIsSubmitting(false);
+            return;
         }
-
-        setIsSubmitting(true)
 
         try {
-            await createPostMutation.mutateAsync({
+            const result = await createPostMutation.mutateAsync({
                 title: formData.title,
-                category: formData.category,
+                categoryId: formData.categoryId, // categoryIdを使用
                 content: formData.content,
                 budget: parseInt(formData.budget),
-                deadline: formData.deadline && formData.deadline.trim() ? new Date(formData.deadline) : undefined,
-            })
+                deadline: formData.deadline ? new Date(formData.deadline) : undefined,
+            });
 
-            router.push('/dashboard')
+            router.push(`/posts/${result.id}`);
         } catch (error: any) {
-            setErrors({
-                general: error.message || '投稿の作成に失敗しました'
-            })
+            if (error.message) {
+                setErrors({ general: error.message });
+            }
         } finally {
-            setIsSubmitting(false)
+            setIsSubmitting(false);
         }
-    }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target
@@ -106,165 +112,147 @@ export default function CreatePostPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">新しい依頼を投稿</h2>
-                    <p className="text-gray-600">
-                        明確な依頼内容を記載して、最適なパートナーを見つけましょう。
-                    </p>
-                </div>
+        <div className="min-h-screen bg-gray-50 py-8">
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-6">新しい依頼を投稿</h1>
 
-                <form onSubmit={handleSubmit} className="card max-w-2xl">
+                    {/* カテゴリ取得エラー時の表示 */}
+                    {isError && (
+                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                            <p className="text-red-600">カテゴリの取得に失敗しました。ネットワーク接続をご確認の上、再度お試しください。</p>
+                            <button
+                                type="button"
+                                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                onClick={() => refetch()}
+                            >
+                                再取得
+                            </button>
+                        </div>
+                    )}
+
+                    {/* カテゴリが0件の場合の案内 */}
+                    {!isLoading && !isError && categories.length === 0 && (
+                        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                            <p className="text-yellow-700">利用可能なカテゴリがありません。管理者にお問い合わせください。</p>
+                        </div>
+                    )}
+
                     {errors.general && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
                             <p className="text-red-600">{errors.general}</p>
                         </div>
                     )}
 
-                    {/* タイトル */}
-                    <div className="mb-6">
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                            タイトル <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            id="title"
-                            name="title"
-                            value={formData.title}
-                            onChange={handleInputChange}
-                            className={`form-input ${errors.title ? 'border-red-500' : ''}`}
-                            placeholder="例：ランディングページのデザインをお願いします"
-                            maxLength={100}
-                        />
-                        {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
-                        <p className="mt-1 text-sm text-gray-500">{formData.title.length}/100文字</p>
-                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* タイトル */}
+                        <div>
+                            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                                タイトル *
+                            </label>
+                            <input
+                                type="text"
+                                id="title"
+                                name="title"
+                                value={formData.title}
+                                onChange={handleInputChange}
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                    errors.title ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                                placeholder="依頼のタイトルを入力してください"
+                            />
+                            {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
+                        </div>
 
-                    {/* カテゴリ */}
-                    <div className="mb-6">
-                        <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                            カテゴリ <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            id="category"
-                            name="category"
-                            value={formData.category}
-                            onChange={handleInputChange}
-                            className={`form-input ${errors.category ? 'border-red-500' : ''}`}
-                        >
-                            <option value="">カテゴリを選択してください</option>
-                            {categories.map(category => (
-                                <option key={category} value={category}>
-                                    {category}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
-                    </div>
+                        {/* カテゴリ */}
+                        <div>
+                            <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-2">
+                                カテゴリ *
+                            </label>
+                            <select
+                                id="categoryId"
+                                name="categoryId"
+                                value={formData.categoryId}
+                                onChange={handleInputChange}
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                    errors.categoryId ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                            >
+                                <option value="">カテゴリを選択してください</option>
+                                {categories.map((category) => (
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.categoryId && <p className="mt-1 text-sm text-red-600">{errors.categoryId}</p>}
+                        </div>
 
-                    {/* 内容 */}
-                    <div className="mb-6">
-                        <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                            依頼内容 <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                            id="content"
-                            name="content"
-                            value={formData.content}
-                            onChange={handleInputChange}
-                            rows={6}
-                            className={`form-input ${errors.content ? 'border-red-500' : ''}`}
-                            placeholder="具体的な要件、納期、参考資料などを詳しく記載してください..."
-                        />
-                        {errors.content && <p className="mt-1 text-sm text-red-600">{errors.content}</p>}
-                    </div>
+                        {/* 内容 */}
+                        <div>
+                            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                                依頼内容 *
+                            </label>
+                            <textarea
+                                id="content"
+                                name="content"
+                                value={formData.content}
+                                onChange={handleInputChange}
+                                rows={6}
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                    errors.content ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                                placeholder="依頼の詳細を入力してください"
+                            />
+                            {errors.content && <p className="mt-1 text-sm text-red-600">{errors.content}</p>}
+                        </div>
 
-                    {/* 予算 */}
-                    <div className="mb-6">
-                        <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-2">
-                            予算 <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
+                        {/* 予算 */}
+                        <div>
+                            <label htmlFor="budget" className="block text-sm font-medium text-gray-700 mb-2">
+                                予算（円） *
+                            </label>
                             <input
                                 type="number"
                                 id="budget"
                                 name="budget"
                                 value={formData.budget}
                                 onChange={handleInputChange}
-                                className={`form-input pr-12 ${errors.budget ? 'border-red-500' : ''}`}
-                                placeholder="10000"
                                 min="100"
-                            />
-                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                                円
-                            </span>
-                        </div>
-                        {errors.budget && <p className="mt-1 text-sm text-red-600">{errors.budget}</p>}
-                        <p className="mt-1 text-sm text-gray-500">
-                            プラットフォーム手数料（15% + 50円）が別途かかります
-                        </p>
-                    </div>
-
-                    {/* 希望納期 */}
-                    <div className="mb-8">
-                        <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-2">
-                            希望納期（任意）
-                        </label>
-                        <input
-                            type="date"
-                            id="deadline"
-                            name="deadline"
-                            value={formData.deadline}
-                            onChange={handleInputChange}
-                            className="form-input"
-                            min={new Date().toISOString().split('T')[0]}
-                        />
-                    </div>
-
-                    {/* 送信ボタン */}
-                    <div className="flex gap-4">
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className={`btn-primary flex-1 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                    errors.budget ? 'border-red-300' : 'border-gray-300'
                                 }`}
-                        >
-                            {isSubmitting ? '投稿中...' : '依頼を投稿する'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                        >
-                            キャンセル
-                        </button>
-                    </div>
-                </form>
+                                placeholder="1000"
+                            />
+                            {errors.budget && <p className="mt-1 text-sm text-red-600">{errors.budget}</p>}
+                        </div>
 
-                {/* 投稿のガイドライン */}
-                <div className="mt-8 card bg-blue-50 border-blue-200">
-                    <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                        良い依頼を作成するためのコツ
-                    </h3>
-                    <ul className="space-y-2 text-blue-800">
-                        <li className="flex items-start">
-                            <span className="text-blue-500 mr-2">•</span>
-                            明確で具体的なタイトルを付ける
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-blue-500 mr-2">•</span>
-                            要件を詳細に記載する（デザインの場合：サイズ、カラー、参考イメージなど）
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-blue-500 mr-2">•</span>
-                            納期は余裕を持って設定する
-                        </li>
-                        <li className="flex items-start">
-                            <span className="text-blue-500 mr-2">•</span>
-                            適正な予算を設定する（市場価格を参考に）
-                        </li>
-                    </ul>
+                        {/* 期限 */}
+                        <div>
+                            <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-2">
+                                期限（任意）
+                            </label>
+                            <input
+                                type="datetime-local"
+                                id="deadline"
+                                name="deadline"
+                                value={formData.deadline}
+                                onChange={handleInputChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        {/* 送信ボタン */}
+                        <div className="flex justify-end">
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSubmitting ? '投稿中...' : '投稿する'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

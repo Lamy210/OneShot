@@ -16,13 +16,35 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
     }))
 
-    const [trpcClient] = useState(() => trpc.createClient({
-        links: [
-            httpBatchLink({
-                url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/trpc',
-            }),
-        ],
-    }))
+    const [trpcClient] = useState(() => {
+        const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/trpc'
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('tRPC URL:', url)
+        }
+        return trpc.createClient({
+            links: [
+                httpBatchLink({
+                    url,
+                    fetch(url, options) {
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.log('tRPC Request:', url, options)
+                        }
+                        return fetch(url, options).then(response => {
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.log('tRPC Response:', response.status, response.statusText)
+                            }
+                            return response
+                        }).catch(error => {
+                            if (process.env.NODE_ENV !== 'production') {
+                                console.error('tRPC Request Error:', error)
+                            }
+                            throw error
+                        })
+                    },
+                }),
+            ],
+        })
+    })
 
     return (
         <UserProvider>

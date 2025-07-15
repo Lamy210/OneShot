@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { jwtDecode } from 'jwt-decode';
 
 interface Post {
     id: string;
@@ -12,52 +13,40 @@ interface Post {
     authorId: string;
 }
 
+// Keycloak JWTの型定義
+interface KeycloakJwtPayload {
+    sub: string;
+    preferred_username?: string;
+    nickname?: string;
+    name?: string;
+    email?: string;
+    [key: string]: any;
+}
+
 export default function Dashboard() {
-    const [posts, setPosts] = useState<Post[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // 投稿一覧取得（tRPC）
+    const postsQuery = trpc.posts.list.useQuery({});
+    
+    // 統計データ取得（tRPC）
+    const statsQuery = trpc.dashboard.getStats.useQuery();
+    
+    // 通知データ取得（tRPC）
+    const notificationsQuery = trpc.notifications.list.useQuery({ limit: 5, unreadOnly: false });
 
-    // Mock user data - in real app this would come from authentication
-    const user = {
-        id: 'user-1',
-        name: 'ユーザー',
-        email: 'user@example.com'
-    };
-
-    useEffect(() => {
-        // Mock posts data - in real app this would come from API
-        const mockPosts: Post[] = [
-            {
-                id: '1',
-                title: 'サンプル投稿1',
-                content: 'これはサンプルの投稿内容です。',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                authorId: user.id
-            },
-            {
-                id: '2',
-                title: 'サンプル投稿2',
-                content: 'もう一つのサンプル投稿です。',
-                createdAt: new Date(Date.now() - 86400000).toISOString(),
-                updatedAt: new Date(Date.now() - 86400000).toISOString(),
-                authorId: user.id
+    // JWTからユーザー情報を取得
+    let user: KeycloakJwtPayload | null = null;
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                user = jwtDecode<KeycloakJwtPayload>(token);
+            } catch (e) {
+                user = null;
             }
-        ];
-
-        setTimeout(() => {
-            setPosts(mockPosts);
-            setLoading(false);
-        }, 1000);
-    }, []);
-
-    const handleDeletePost = (postId: string) => {
-        if (confirm('投稿を削除しますか？')) {
-            setPosts(posts.filter(post => post.id !== postId));
         }
-    };
+    }
 
-    if (loading) {
+    if (postsQuery.isLoading || statsQuery.isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
@@ -68,15 +57,43 @@ export default function Dashboard() {
         );
     }
 
-    if (error) {
+    if (postsQuery.error || statsQuery.error) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center text-red-600">
-                    <p>エラーが発生しました: {error}</p>
+                    <p>エラーが発生しました: {postsQuery.error?.message || statsQuery.error?.message}</p>
                 </div>
             </div>
         );
     }
+
+    const posts = postsQuery.data?.posts || [];
+    const stats = statsQuery.data || {
+        totalPosts: 0,
+        monthlyViews: 0,
+        totalLikes: 0,
+        totalEarnings: 0,
+        pendingPayments: 0
+    };
+
+    // ユーザー情報が取得できない場合のガード
+    if (!user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center text-red-600">
+                    <p>ユーザー情報が取得できません。再度ログインしてください。</p>
+                </div>
+            </div>
+        );
+    }
+
+    const handleDeletePost = (postId: string) => {
+        if (confirm('投稿を削除しますか？')) {
+            // In a real application, you would call a tRPC mutation to delete the post
+            // For now, we'll just filter it out locally
+            // setPosts(posts.filter(post => post.id !== postId));
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -91,12 +108,13 @@ export default function Dashboard() {
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">ユーザー情報</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">名前</label>
-                            <p className="mt-1 text-gray-900">{user.name}</p>
+                            <span className="font-medium">ID:</span> {user.sub}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">メールアドレス</label>
-                            <p className="mt-1 text-gray-900">{user.email}</p>
+                            <span className="font-medium">名前:</span> {user.preferred_username || user.nickname || user.name || ''}
+                        </div>
+                        <div>
+                            <span className="font-medium">メール:</span> {user.email || ''}
                         </div>
                     </div>
                 </div>
@@ -114,7 +132,7 @@ export default function Dashboard() {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">総投稿数</p>
-                                <p className="text-2xl font-semibold text-gray-900">{posts.length}</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.totalPosts}</p>
                             </div>
                         </div>
                     </div>
@@ -131,7 +149,7 @@ export default function Dashboard() {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">今月の閲覧数</p>
-                                <p className="text-2xl font-semibold text-gray-900">1,234</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.monthlyViews.toLocaleString()}</p>
                             </div>
                         </div>
                     </div>
@@ -146,8 +164,43 @@ export default function Dashboard() {
                                 </div>
                             </div>
                             <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-600">いいね数</p>
-                                <p className="text-2xl font-semibold text-gray-900">89</p>
+                                <p className="text-sm font-medium text-gray-600">総いいね数</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.totalLikes.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Additional Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm font-medium text-gray-600">総収益</p>
+                                <p className="text-2xl font-semibold text-gray-900">¥{stats.totalEarnings.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                                <div className="w-8 h-8 bg-orange-500 rounded-md flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm font-medium text-gray-600">保留中の決済</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.pendingPayments}</p>
                             </div>
                         </div>
                     </div>
